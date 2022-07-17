@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+import json
+import datetime
+from datetime import timedelta
+
+
+import requests 
+
 from core.config import Config
 from core.cpu import CPUInfo
 from core.disk import DiskInfo
@@ -16,31 +23,127 @@ class SystemProfiler(object):
         self.memory = MemoryInfo(self.config)
         self.network = NetworkInfo(self.config)
         self.system = SystemInfo(self.config)       
+        self.access_token, self.refresh_token = self._authenticate()
+
+        if not self.access_token or not self.refresh_token:
+            raise AttributeError("Missing Auth Tokens.")
+
+
+    def _authenticate(self):
+        r = requests.post(f"{self.config.api_base_url}/authenticate",
+            json={
+                "email":f"{self.config.api_username}",
+                "password":f"{self.config.api_password}"
+            },
+            headers={"Content-Type": "application/json"}
+        )
+        if not r.status_code == 200:
+            return None, None
+
+        resp = r.json()
+        return resp["access_token"], resp["refresh_token"]
+
+    def _datetime_convertor(self, o):
+        if isinstance(o, (datetime.datetime, timedelta)):
+            return o.__str__()
 
     def fetch_cpu_stats(self, target):
         cpu_data = self.cpu.cpu_data()
-        process_data = self.cpu.processes()
-        results = {"cpu_data": cpu_data, "process_data": process_data, "target": target}
+        # processes = self.cpu.processes()
+
+        r = requests.post(f"{self.config.api_base_url}/api/cpu/info", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps(
+                {"cpu_data": cpu_data,
+                "target": target}
+            )
+        )
+        return True
+
 
     def fetch_disk_stats(self, target):
-        disk_data = self.disk.partitions() 
-        results = {"disk_data": disk_data, "target": target}
+        disk_data = self.disk.partitions()
+    
+        r = requests.post(f"{self.config.api_base_url}/api/disk/info", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"disk_data": disk_data, "target": target})
+        )
+        return True
+
 
     def fetch_memory_stats(self, target):
         mem_data = self.memory.mem_data()
-        results = {"mem_data": mem_data, "target": target}
+        r = requests.post(f"{self.config.api_base_url}/api/memory/info", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({
+                "mem_data":  mem_data,
+                "target": target})
+        )
+        return True
 
     def fetch_network_stats(self, target):
         netwk_data = self.network.net_data()
-        hostname = self.network.hostname()
-        ip = self.network.ip_address()
-        results = {"network_data": netwk_data, "hostname": hostname, "ip_address": ip, "target": target}
+        ips = self.network.ip_address()
+
+        r = requests.post(f"{self.config.api_base_url}/api/network/info", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"network_data": netwk_data, "target": target}, 
+                default=self._datetime_convertor)
+        )
+        r = requests.post(f"{self.config.api_base_url}/api/network/ip", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"ips": ips, "target": target}, 
+                default=self._datetime_convertor)
+        )
+        return True        
 
     def fetch_system_stats(self, target):
         opersys = self.system.operating_system()
         users = self.system.users()
         uptime = self.system.uptime()
-        results = {"operating_system": opersys, "users": users, "uptime": uptime, "target": target}
+        
+        r = requests.post(f"{self.config.api_base_url}/api/system/os", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"os": opersys, "target": target}, 
+                default=self._datetime_convertor)
+        )
+
+        r = requests.post(f"{self.config.api_base_url}/api/system/uptime", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"uptime": uptime, "target": target}, 
+                default=self._datetime_convertor)
+        )
+
+        r = requests.post(f"{self.config.api_base_url}/api/system/users", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"users": users, "target": target},
+                default=self._datetime_convertor)
+        )
+        return True
 
 
 def main():

@@ -44,7 +44,7 @@ class CPUInfo(object):
                             "status": proc.status(),
                             "create_time": datetime.datetime.fromtimestamp(
                                 proc.create_time()
-                            ),
+                            ).isoformat(),
                             "cli": proc.cmdline(),
                             "executable": proc.exe(),
                             "cpu_percent": proc.cpu_percent(),
@@ -63,7 +63,7 @@ class CPUInfo(object):
                             "status": proc.status(),
                             "create_time": datetime.datetime.fromtimestamp(
                                 proc.create_time()
-                            ),
+                            ).isoformat(),
                         }
                     )
 
