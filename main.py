@@ -16,18 +16,21 @@ from core.system import SystemInfo
 
 
 class SystemProfiler(object):
+
     def __init__(self) -> None:
         self.config = Config()
+
+        self.access_token, self.refresh_token = self._authenticate()
+        if not self.access_token or not self.refresh_token:
+            raise AttributeError("Missing Auth Tokens.")
+
+        self.report_id = None
+
         self.cpu = CPUInfo(self.config)
         self.disk = DiskInfo(self.config)
         self.memory = MemoryInfo(self.config)
         self.network = NetworkInfo(self.config)
-        self.system = SystemInfo(self.config)       
-        self.access_token, self.refresh_token = self._authenticate()
-
-        if not self.access_token or not self.refresh_token:
-            raise AttributeError("Missing Auth Tokens.")
-
+        self.system = SystemInfo(self.config)
 
     def _authenticate(self):
         r = requests.post(f"{self.config.api_base_url}/authenticate",
@@ -47,6 +50,23 @@ class SystemProfiler(object):
         if isinstance(o, (datetime.datetime, timedelta)):
             return o.__str__()
 
+    def register_new_report(self, target):
+        r = requests.post(f"{self.config.api_base_url}/api/report/new", 
+            headers={
+                "Authorization": f"Bearer {self.access_token}", 
+                "Content-Type": "application/json"
+            },
+            data=json.dumps({"target": f"{target}"})
+        )
+
+        if not r.status_code == 200:
+            print(f"Unable to generate new report. API response status code: {r.status_code}")
+            return None
+        
+        resp = r.json()
+        self.report_id = resp["report_id"]
+        return self.report_id
+
     def fetch_cpu_stats(self, target):
         cpu_data = self.cpu.cpu_data()
         # processes = self.cpu.processes()
@@ -57,22 +77,21 @@ class SystemProfiler(object):
                 "Content-Type": "application/json"
             },
             data=json.dumps(
-                {"cpu_data": cpu_data,
-                "target": target}
-            )
+                {"cpu_data": cpu_data, "target": target, "report_id": self.report_id}, 
+                    default=self._datetime_convertor)
         )
         return True
 
-
     def fetch_disk_stats(self, target):
         disk_data = self.disk.partitions()
-    
+        
         r = requests.post(f"{self.config.api_base_url}/api/disk/info", 
             headers={
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"disk_data": disk_data, "target": target})
+            data=json.dumps({"disk_data": disk_data, 
+                "target": target, "report_id": self.report_id})
         )
         return True
 
@@ -86,7 +105,8 @@ class SystemProfiler(object):
             },
             data=json.dumps({
                 "mem_data":  mem_data,
-                "target": target})
+                "target": target, "report_id": self.report_id},
+                    default=self._datetime_convertor)
         )
         return True
 
@@ -99,7 +119,7 @@ class SystemProfiler(object):
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"network_data": netwk_data, "target": target}, 
+            data=json.dumps({"network_data": netwk_data, "target": target, "report_id": self.report_id}, 
                 default=self._datetime_convertor)
         )
         r = requests.post(f"{self.config.api_base_url}/api/network/ip", 
@@ -107,7 +127,7 @@ class SystemProfiler(object):
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"ips": ips, "target": target}, 
+            data=json.dumps({"ips": ips, "target": target, "report_id": self.report_id}, 
                 default=self._datetime_convertor)
         )
         return True        
@@ -122,7 +142,7 @@ class SystemProfiler(object):
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"os": opersys, "target": target}, 
+            data=json.dumps({"os": opersys, "target": target, "report_id": self.report_id}, 
                 default=self._datetime_convertor)
         )
 
@@ -131,7 +151,7 @@ class SystemProfiler(object):
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"uptime": uptime, "target": target}, 
+            data=json.dumps({"uptime": uptime, "target": target, "report_id": self.report_id}, 
                 default=self._datetime_convertor)
         )
 
@@ -140,7 +160,7 @@ class SystemProfiler(object):
                 "Authorization": f"Bearer {self.access_token}", 
                 "Content-Type": "application/json"
             },
-            data=json.dumps({"users": users, "target": target},
+            data=json.dumps({"users": users, "target": target, "report_id": self.report_id},
                 default=self._datetime_convertor)
         )
         return True
@@ -149,7 +169,9 @@ class SystemProfiler(object):
 def main():
     sys_profiler = SystemProfiler()
     target_hostname = sys_profiler.network.hostname()
-
+    sys_profiler.register_new_report(target=target_hostname)
+    print(f"Running System Profiler Report on {target_hostname}. Using Report ID: {sys_profiler.report_id}.")
+    
     sys_profiler.fetch_cpu_stats(target=target_hostname)
     sys_profiler.fetch_disk_stats(target=target_hostname)
     sys_profiler.fetch_memory_stats(target=target_hostname)
