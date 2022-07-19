@@ -19,7 +19,7 @@ class NetworkInfo(object):
 
         try:
             net_stat = psutil.net_io_counters()
-            
+
             formatted_net_stat = {
                 "bytes_sent": bc.format_size(net_stat.bytes_sent),
                 "bytes_recvd": bc.format_size(net_stat.bytes_recv),
