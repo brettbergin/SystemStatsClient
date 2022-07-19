@@ -171,9 +171,7 @@ def main():
 
     sys_profiler.fetch_cpu_stats(target=target_hostname, 
         api_path="/api/cpu/info")
-    
-    # sys_profiler.fetch_process_stats(target=target_hostname, api_path="/api/cpu/processes")
-    
+
     sys_profiler.fetch_disk_stats(target=target_hostname, 
         api_path="/api/disk/info")
     
@@ -186,6 +184,9 @@ def main():
     sys_profiler.fetch_system_stats(
         target=target_hostname, os_api_path="/api/system/os", 
         users_api_path="/api/system/users", uptime_api_path="/api/system/uptime")
+
+    sys_profiler.fetch_process_stats(target=target_hostname, 
+        api_path="/api/cpu/processes")
 
 
 if __name__ == "__main__":
