@@ -21,7 +21,7 @@ class SystemProfiler(object):
 
         self.access_token, self.refresh_token = self._authenticate()
         if not self.access_token or not self.refresh_token:
-            raise AttributeError("Missing Auth Tokens.")
+            raise AttributeError("Failed To Authenticate.")
 
         self.report_id = None
 
