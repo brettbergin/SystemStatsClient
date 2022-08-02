@@ -23,12 +23,12 @@ class NetworkInfo(object):
             formatted_net_stat = {
                 "bytes_sent": bc.format_size(net_stat.bytes_sent),
                 "bytes_recvd": bc.format_size(net_stat.bytes_recv),
-                "packets_sent": bc.format_size(net_stat.packets_sent),
-                "packets_recvd": bc.format_size(net_stat.packets_recv),
-                "err_pkt_in": bc.format_size(net_stat.errin),
-                "err_pkt_out": bc.format_size(net_stat.errout),
-                "dropped_pkt_in": bc.format_size(net_stat.dropin),
-                "dropped_pkt_out": bc.format_size(net_stat.dropout),
+                "packets_sent": net_stat.packets_sent,
+                "packets_recvd": net_stat.packets_recv,
+                "err_pkt_in": net_stat.errin,
+                "err_pkt_out": net_stat.errout,
+                "dropped_pkt_in": net_stat.dropin,
+                "dropped_pkt_out": net_stat.dropout,
             }
 
             return formatted_net_stat
